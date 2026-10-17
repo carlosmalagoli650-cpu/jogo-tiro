@@ -3,300 +3,241 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tiro 3D</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Apocalipse Zumbi 3D</title>
 <style>
 body{margin:0;overflow:hidden;font-family:Arial;background:#111;color:white}
-#hud{position:fixed;top:12px;left:12px;background:#000b;padding:12px;line-height:1.8;z-index:2}
-#mirar{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);font-size:30px;z-index:2;pointer-events:none}
-#msg{position:fixed;top:25%;width:100%;text-align:center;font-size:25px;z-index:2;pointer-events:none}
-#inicio{position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;text-align:center;z-index:5}
-#caixa{background:#202b3a;padding:28px;border-radius:15px;max-width:440px}
-button{padding:14px 24px;font-size:18px;cursor:pointer;background:#36adff;border:0;border-radius:8px;font-weight:bold}
-#instrucoes{position:fixed;bottom:10px;width:100%;text-align:center;background:#0009;padding:8px 0;font-size:13px}
+#hud{position:fixed;top:12px;left:12px;background:#000b;padding:13px;line-height:1.8;z-index:2}
+#aim{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);font-size:30px;z-index:2;pointer-events:none}
+#msg{position:fixed;top:25%;width:100%;text-align:center;font-size:25px;text-shadow:2px 2px #000;z-index:3}
+#overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000d;text-align:center;z-index:5}
+#panel{background:#202820;padding:28px;border:1px solid #75836b;border-radius:14px;max-width:450px}
+button{padding:14px 25px;font-size:18px;background:#a6d94c;border:0;border-radius:8px;cursor:pointer;font-weight:bold}
+#help{position:fixed;bottom:10px;width:100%;text-align:center;background:#0009;padding:8px 0;font-size:13px}
 </style>
 </head>
 <body>
 <div id="hud">
-❤️ Vida: <span id="vida">100</span><br>
-🔫 Munição: <span id="municao">30</span><br>
-⭐ Pontos: <span id="pontos">0</span><br>
-🤖 Robôs: <span id="robos">8</span>
+🧟 APOCALIPSE ZUMBI<br>
+❤️ Vida: <span id="hp">100</span><br>
+🔫 Munição: <span id="ammo">30</span>/30<br>
+🏆 Pontos: <span id="score">0</span><br>
+🧟 Zumbis: <span id="count">10</span>
 </div>
-<div id="mirar">+</div>
+<div id="aim">+</div>
 <div id="msg"></div>
-<div id="instrucoes">WASD andar | Shift correr | Espaço pular | Mouse mirar | Clique atirar | R recarregar</div>
-<div id="inicio"><div id="caixa">
-<h1>TIRO 3D</h1>
-<p>Elimine os 8 robôs! Agora você pode acertar inimigos de muito longe.</p>
-<p>Use o mouse para mirar e clique para atirar.</p>
-<button id="jogar">JOGAR</button>
+<div id="help">WASD: andar | Mouse: mirar | Clique: atirar | R: recarregar | Shift: correr | Espaço: pular</div>
+<div id="overlay"><div id="panel">
+<h1>🧟 APOCALIPSE ZUMBI</h1>
+<p>Sobreviva ao ataque! Elimine todos os zumbis antes que eles acabem com você.</p>
+<p>Use WASD para andar e o mouse para mirar.</p>
+<button id="start">COMEÇAR JOGO</button>
+<p style="font-size:12px">Requer internet para carregar os gráficos 3D.</p>
 </div></div>
 
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x87b9df);
-scene.fog=new THREE.Fog(0x87b9df,100,260);
+scene.background=new THREE.Color(0x777d78);
+scene.fog=new THREE.Fog(0x777d78,35,130);
 
-const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,1500);
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,500);
 camera.rotation.order='YXZ';
-camera.position.set(0,1.7,15);
+camera.position.set(0,1.7,12);
 
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 document.body.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xffffff,0x526044,2));
-const sun=new THREE.DirectionalLight(0xffffff,2);
-sun.position.set(20,40,20);
-scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xdde8dc,0x34392e,2));
+const light=new THREE.DirectionalLight(0xffffff,2);
+light.position.set(20,40,10);scene.add(light);
 
-const material=c=>new THREE.MeshStandardMaterial({color:c});
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(220,220),material(0x526b45));
-ground.rotation.x=-Math.PI/2;
-scene.add(ground);
+const mat=c=>new THREE.MeshStandardMaterial({color:c});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(180,180),mat(0x424b3d));
+ground.rotation.x=-Math.PI/2;scene.add(ground);
 
-function block(x,y,z,w,h,d,color){
- const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));
+function box(x,y,z,w,h,d,c){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));
  m.position.set(x,y,z);scene.add(m);return m;
 }
 
-// Muros da arena
-block(0,3,-55,112,6,2,0x69747e);
-block(0,3,55,112,6,2,0x69747e);
-block(-55,3,0,2,6,112,0x69747e);
-block(55,3,0,2,6,112,0x69747e);
+// Ruas e prédios abandonados
+for(let i=0;i<16;i++){
+ let x=(i%4)*30-45,z=Math.floor(i/4)*-30-15;
+ box(x,3,z,9,6,8,0x535b58);
+ for(let y=0;y<2;y++)for(let k=-1;k<=1;k++){
+  box(x+k*2,2+y*2,z+4.05,0.8,1,0.1,0x303e43);
+ }
+}
+for(let i=0;i<20;i++){
+ const x=(Math.random()-.5)*95,z=(Math.random()-.5)*95;
+ const car=box(x,.65,z,2.3,1.2,4,Math.random()>.5?0x6c3535:0x343b49);
+}
+box(0,.08,0,180,.1,180,0x424b3d);
 
-// Caixas para cobertura
-[[-12,-10],[12,-15],[23,8],[-23,18],[0,-32],[-33,-7],[32,30]]
-.forEach(([x,z])=>block(x,1.2,z,3,2.4,3,0x92704a));
-
-// Arma simples visível
 const gun=new THREE.Group();
-const metal=material(0x252b32);
-const cano=new THREE.Mesh(new THREE.BoxGeometry(.15,.15,.8),metal);
-cano.position.set(.3,-.25,-.7);
-gun.add(cano);
-const corpo=new THREE.Mesh(new THREE.BoxGeometry(.28,.23,.4),metal);
-corpo.position.set(.3,-.32,-.35);
-gun.add(corpo);
-camera.add(gun);
-scene.add(camera);
+const gunmat=mat(0x20252a);
+const barrel=new THREE.Mesh(new THREE.BoxGeometry(.15,.15,.8),gunmat);
+barrel.position.set(.3,-.25,-.7);gun.add(barrel);
+const body=new THREE.Mesh(new THREE.BoxGeometry(.28,.23,.45),gunmat);
+body.position.set(.3,-.33,-.35);gun.add(body);
+camera.add(gun);scene.add(camera);
 
-const enemies=[];
-function criarRobo(x,z){
- const root=new THREE.Group();
- root.position.set(x,0,z);
- const torso=new THREE.Mesh(new THREE.BoxGeometry(1,1,.55),material(0xc73333));
- torso.position.y=1.3;root.add(torso);
- const head=new THREE.Mesh(new THREE.BoxGeometry(.7,.65,.6),material(0x303945));
- head.position.y=2.15;root.add(head);
-
- const eyesMat=material(0xffff55);
- for(const xeye of [-.18,.18]){
-  const eye=new THREE.Mesh(new THREE.BoxGeometry(.13,.1,.04),eyesMat);
-  eye.position.set(xeye,2.2,-.32);root.add(eye);
+const zombies=[];
+function makeZombie(x,z){
+ const root=new THREE.Group();root.position.set(x,0,z);
+ const skin=mat(0x64874d),shirt=mat(0x563c39),eyes=mat(0xff2424);
+ const torso=new THREE.Mesh(new THREE.BoxGeometry(.8,1,.45),shirt);
+ torso.position.y=1.25;root.add(torso);
+ const head=new THREE.Mesh(new THREE.BoxGeometry(.62,.62,.6),skin);
+ head.position.y=2.08;root.add(head);
+ for(const ex of [-.16,.16]){
+  const eye=new THREE.Mesh(new THREE.BoxGeometry(.12,.1,.04),eyes);
+  eye.position.set(ex,2.13,-.31);root.add(eye);
  }
  for(const side of [-1,1]){
-  const arm=new THREE.Mesh(new THREE.BoxGeometry(.23,.8,.25),material(0x303945));
-  arm.position.set(side*.65,1.3,0);root.add(arm);
-  const leg=new THREE.Mesh(new THREE.BoxGeometry(.27,.75,.3),material(0x303945));
-  leg.position.set(side*.25,.38,0);root.add(leg);
+  const arm=new THREE.Mesh(new THREE.BoxGeometry(.2,.85,.22),skin);
+  arm.position.set(side*.52,1.3,-.12);arm.rotation.z=side*-.2;root.add(arm);
+  const leg=new THREE.Mesh(new THREE.BoxGeometry(.24,.7,.25),mat(0x343b34));
+  leg.position.set(side*.22,.36,0);root.add(leg);
  }
-
- // Cada peça aponta para o robô que a contém
- root.traverse(obj=>{
-  if(obj.isMesh)obj.userData.robo=root;
- });
- root.userData.vida=3;
- root.userData.ataque=0;
- scene.add(root);
- enemies.push(root);
+ root.traverse(o=>{if(o.isMesh)o.userData.owner=root;});
+ root.userData.hp=3;root.userData.attack=0;
+ scene.add(root);zombies.push(root);
 }
-
-for(let i=0;i<8;i++){
+for(let i=0;i<10;i++){
  let x,z;
- do{
-  x=(Math.random()-.5)*82;
-  z=-15-Math.random()*65;
- }while(Math.hypot(x,z-15)<22);
- criarRobo(x,z);
+ do{x=(Math.random()-.5)*75;z=(Math.random()-.5)*75;}
+ while(Math.hypot(x,z-12)<20);
+ makeZombie(x,z);
 }
 
-let vida=100,municao=30,pontos=0;
-let jogando=false,acabou=false,recarregando=false;
-const keys={};
+let hp=100,ammo=30,score=0,locked=false,over=false,reloading=false;
 const $=id=>document.getElementById(id);
-function atualizar(){
- $('vida').textContent=Math.max(0,Math.ceil(vida));
- $('municao').textContent=municao;
- $('pontos').textContent=pontos;
- $('robos').textContent=enemies.length;
+function hud(){
+ $('hp').textContent=Math.max(0,Math.ceil(hp));
+ $('ammo').textContent=ammo;
+ $('score').textContent=score;
+ $('count').textContent=zombies.length;
 }
-let msgTimer;
-function mensagem(text){
- $('msg').textContent=text;
- clearTimeout(msgTimer);
- msgTimer=setTimeout(()=>$('msg').textContent='',850);
+let timer;
+function message(t){
+ $('msg').textContent=t;clearTimeout(timer);
+ timer=setTimeout(()=>$('msg').textContent='',900);
 }
+const ray=new THREE.Raycaster();
+ray.near=0;ray.far=1000;
+const center=new THREE.Vector2(0,0);
 
-// CORREÇÃO DO TIRO:
-// O raio sai do centro da câmera e pode alcançar até 1000 unidades.
-const raycaster=new THREE.Raycaster();
-raycaster.near=0;
-raycaster.far=1000;
-const centro=new THREE.Vector2(0,0);
-
-function atirar(){
- if(!jogando||acabou||recarregando)return;
- if(municao<=0){mensagem('Sem munição! Aperte R');return;}
-
- municao--;
- atualizar();
-
- raycaster.setFromCamera(centro,camera);
- raycaster.far=1000;
-
- // Reúne todas as partes de todos os robôs
- const pecas=[];
- for(const robo of enemies){
-  robo.traverse(obj=>{
-   if(obj.isMesh)pecas.push(obj);
-  });
- }
-
- // Detecta o primeiro robô atingido, mesmo a grande distância
- const impactos=raycaster.intersectObjects(pecas,false);
-
- if(impactos.length>0){
-  const robo=impactos[0].object.userData.robo;
-  if(robo&&enemies.includes(robo)){
-   robo.userData.vida--;
-   if(robo.userData.vida<=0){
-    scene.remove(robo);
-    enemies.splice(enemies.indexOf(robo),1);
-    pontos+=100;
-    mensagem('ROBÔ ELIMINADO! +100');
-   }else{
-    mensagem('ACERTOU! Faltam '+robo.userData.vida+' tiros');
-   }
-   atualizar();
-   if(enemies.length===0)fim(true);
+// Tiro de longo alcance: detecta a peça atingida e identifica seu zumbi.
+function shoot(){
+ if(!locked||over||reloading)return;
+ if(ammo<=0){message('Sem munição! Aperte R');return;}
+ ammo--;hud();
+ ray.setFromCamera(center,camera);
+ ray.far=1000;
+ const parts=[];
+ for(const z of zombies)z.traverse(o=>{if(o.isMesh)parts.push(o);});
+ const hits=ray.intersectObjects(parts,false);
+ if(hits.length){
+  const z=hits[0].object.userData.owner;
+  if(z&&zombies.includes(z)){
+   z.userData.hp--;
+   if(z.userData.hp<=0){
+    scene.remove(z);zombies.splice(zombies.indexOf(z),1);
+    score+=100;message('ZUMBI ELIMINADO +100');
+   }else message('ACERTOU! Mais '+z.userData.hp+' tiros');
+   hud();
+   if(zombies.length===0)finish(true);
   }
- }else{
-  mensagem('TIROU — mire no robô!');
- }
-
+ }else message('Errou! Mire no zumbi.');
  gun.position.z=.06;
  setTimeout(()=>gun.position.z=0,70);
 }
 
-function recarregar(){
- if(!jogando||recarregando||municao===30||acabou)return;
- recarregando=true;
- mensagem('Recarregando...');
- setTimeout(()=>{
-  municao=30;
-  recarregando=false;
-  atualizar();
-  mensagem('Arma recarregada!');
- },900);
+function reload(){
+ if(!locked||reloading||ammo===30||over)return;
+ reloading=true;message('Recarregando...');
+ setTimeout(()=>{ammo=30;reloading=false;hud();message('Arma recarregada!');},1000);
 }
-
-function fim(venceu){
- acabou=true;
- document.exitPointerLock();
- $('inicio').style.display='flex';
- $('caixa').innerHTML=
- '<h1>'+(venceu?'VOCÊ VENCEU!':'FIM DE JOGO')+'</h1>'+
- '<p>Pontuação: '+pontos+'</p>'+
- '<button id="novamente">JOGAR NOVAMENTE</button>';
- $('novamente').onclick=()=>location.reload();
-}
-
-$('jogar').onclick=()=>renderer.domElement.requestPointerLock();
+const keys={};
+document.addEventListener('keydown',e=>{
+ keys[e.code]=true;
+ if(e.code==='KeyR')reload();
+});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+document.addEventListener('mousedown',e=>{if(e.button===0)shoot();});
+$('start').onclick=()=>renderer.domElement.requestPointerLock();
 
 document.addEventListener('pointerlockchange',()=>{
- jogando=document.pointerLockElement===renderer.domElement&&!acabou;
- if(jogando)$('inicio').style.display='none';
- else if(!acabou)$('inicio').style.display='flex';
+ locked=document.pointerLockElement===renderer.domElement&&!over;
+ if(locked)$('overlay').style.display='none';
+ else if(!over)$('overlay').style.display='flex';
 });
-
 document.addEventListener('mousemove',e=>{
- if(!jogando)return;
+ if(!locked)return;
  camera.rotation.y-=e.movementX*.0022;
  camera.rotation.x-=e.movementY*.0022;
  camera.rotation.x=THREE.MathUtils.clamp(camera.rotation.x,-1.45,1.45);
 });
 
-document.addEventListener('mousedown',e=>{
- if(e.button===0)atirar();
-});
-document.addEventListener('keydown',e=>{
- keys[e.code]=true;
- if(e.code==='KeyR')recarregar();
-});
-document.addEventListener('keyup',e=>keys[e.code]=false);
-document.addEventListener('contextmenu',e=>e.preventDefault());
+function finish(win){
+ over=true;document.exitPointerLock();
+ $('overlay').style.display='flex';
+ $('panel').innerHTML='<h1>'+(win?'VOCÊ SOBREVIVEU!':'VOCÊ FOI DERROTADO!')+
+ '</h1><p>Pontuação: '+score+'</p><button onclick="location.reload()">JOGAR NOVAMENTE</button>';
+}
 
-let anterior=performance.now();
-function animar(agora){
- requestAnimationFrame(animar);
- const dt=Math.min((agora-anterior)/1000,.05);
- anterior=agora;
+let last=performance.now();
+function animate(now){
+ requestAnimationFrame(animate);
+ const dt=Math.min((now-last)/1000,.05);last=now;
 
- if(jogando&&!acabou){
-  const frente=new THREE.Vector3();
-  camera.getWorldDirection(frente);
-  frente.y=0;frente.normalize();
-  const direita=new THREE.Vector3().crossVectors(frente,new THREE.Vector3(0,1,0)).negate().normalize();
-  const movimento=new THREE.Vector3();
-
-  if(keys.KeyW)movimento.add(frente);
-  if(keys.KeyS)movimento.sub(frente);
-  if(keys.KeyD)movimento.add(direita);
-  if(keys.KeyA)movimento.sub(direita);
-
-  if(movimento.lengthSq()>0){
-   movimento.normalize().multiplyScalar((keys.ShiftLeft?12:7)*dt);
-   camera.position.add(movimento);
+ if(locked&&!over){
+  const f=new THREE.Vector3();
+  camera.getWorldDirection(f);f.y=0;f.normalize();
+  const r=new THREE.Vector3().crossVectors(f,new THREE.Vector3(0,1,0)).negate().normalize();
+  const move=new THREE.Vector3();
+  if(keys.KeyW)move.add(f);
+  if(keys.KeyS)move.sub(f);
+  if(keys.KeyD)move.add(r);
+  if(keys.KeyA)move.sub(r);
+  if(move.lengthSq()){
+   move.normalize().multiplyScalar((keys.ShiftLeft?11:6)*dt);
+   camera.position.add(move);
   }
+  camera.position.x=THREE.MathUtils.clamp(camera.position.x,-48,48);
+  camera.position.z=THREE.MathUtils.clamp(camera.position.z,-48,48);
 
-  camera.position.x=THREE.MathUtils.clamp(camera.position.x,-51,51);
-  camera.position.z=THREE.MathUtils.clamp(camera.position.z,-51,51);
+  camera.userData.vy=camera.userData.vy||0;
+  if(keys.Space&&camera.position.y<=1.71)camera.userData.vy=6;
+  camera.userData.vy-=18*dt;
+  camera.position.y+=camera.userData.vy*dt;
+  if(camera.position.y<1.7){camera.position.y=1.7;camera.userData.vy=0;}
 
-  camera.userData.velY=camera.userData.velY||0;
-  if(keys.Space&&camera.position.y<=1.71)camera.userData.velY=6;
-  camera.userData.velY-=18*dt;
-  camera.position.y+=camera.userData.velY*dt;
-  if(camera.position.y<1.7){
-   camera.position.y=1.7;camera.userData.velY=0;
-  }
-
-  for(const robo of [...enemies]){
-   const dx=camera.position.x-robo.position.x;
-   const dz=camera.position.z-robo.position.z;
-   const dist=Math.hypot(dx,dz);
-   if(dist>2.2){
-    robo.position.x+=dx/dist*1.5*dt;
-    robo.position.z+=dz/dist*1.5*dt;
-    robo.rotation.y=Math.atan2(dx,dz);
+  for(const z of [...zombies]){
+   const dx=camera.position.x-z.position.x;
+   const dz=camera.position.z-z.position.z;
+   const d=Math.hypot(dx,dz);
+   if(d>1.8){
+    z.position.x+=dx/d*1.5*dt;
+    z.position.z+=dz/d*1.5*dt;
+    z.rotation.y=Math.atan2(dx,dz);
    }else{
-    robo.userData.ataque+=dt;
-    if(robo.userData.ataque>1){
-     vida-=8;robo.userData.ataque=0;atualizar();
-     if(vida<=0){vida=0;atualizar();fim(false);break;}
+    z.userData.attack+=dt;
+    if(z.userData.attack>1){
+     hp-=10;z.userData.attack=0;hud();
+     if(hp<=0){hp=0;hud();finish(false);break;}
     }
    }
   }
  }
  renderer.render(scene,camera);
 }
-requestAnimationFrame(animar);
-
+requestAnimationFrame(animate);
 addEventListener('resize',()=>{
  camera.aspect=innerWidth/innerHeight;
  camera.updateProjectionMatrix();
